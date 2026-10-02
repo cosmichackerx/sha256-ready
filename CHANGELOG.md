@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-10-03
+
+### Changed
+- Maintenance release, no change in what the tool reports. CI uses `actions/checkout` 7, the release workflow uses
+  `upload-artifact` 7 and `download-artifact` 8, a `dependabot.yml` keeps Cargo dependencies and Actions current
+  (the deliberately pinned `ignore` crate is excluded), and CI runs `dependabot-gaps` in pull request mode.
+
 ## [0.2.0] - 2026-10-02
 
 ### Added
