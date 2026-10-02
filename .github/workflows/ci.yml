@@ -81,3 +81,26 @@ jobs:
           test "${{ steps.clean.outcome }}" = success
           test "${{ steps.bad.outcome }}" = failure
           test -s "${{ runner.temp }}/out.sarif"
+  action-download:
+    name: action downloads release binary (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: clean file passes using the published v0.1.0 binary
+        uses: ./
+        with:
+          version: "0.1.0"
+          path: examples/clean.sh
+      - name: file with SHA-1 assumptions fails (expected)
+        id: bad
+        uses: ./
+        continue-on-error: true
+        with:
+          version: "0.1.0"
+          path: examples/hook-with-sha1-assumptions.sh
+      - shell: bash
+        run: test "${{ steps.bad.outcome }}" = failure
