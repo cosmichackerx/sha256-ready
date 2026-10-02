@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # `ignore` is pinned with = : newer 0.4.x releases need a newer Rust than our MSRV (see Cargo.toml)
+      - dependency-name: "ignore"
+    groups:
+      rust-minor:
+        update-types: ["minor", "patch"]
+    cooldown:
+      default-days: 7
