@@ -26,7 +26,7 @@ longer resolves, a regex that never matches, a column that rejects the insert).
 
 ```bash
 # from source (Rust 1.85+)
-cargo install --git https://github.com/cosmichackerx/sha256-ready
+cargo install --locked --git https://github.com/cosmichackerx/sha256-ready
 
 # or download a binary + checksum from the latest release
 # https://github.com/cosmichackerx/sha256-ready/releases
@@ -89,6 +89,54 @@ The command runs with the sandbox repository as its working directory and these 
 `SANDBOX_TAG` (`v0.0.1`). Add `--keep` to keep the directory, `--commits N` for more history, and
 `--object-format sha1` to compare.
 
+## Adopt it on an existing code base
+
+### Only look at what a pull request changes: `--changed-since`
+
+```bash
+sha256-ready scan --changed-since origin/main            # findings on added/modified lines only
+sha256-ready scan --changed-since origin/main --whole-files   # every finding in the changed files
+```
+
+It compares the working tree with the merge base of the ref and `HEAD`, so committed and uncommitted changes count, and
+untracked files are treated as new. In CI use `fetch-depth: 0` (or fetch the base branch); an unknown ref is a usage
+error (exit 2) rather than a silent pass. Real output from a branch that added one line to a script that already had
+another problem:
+
+```text
+$ sha256-ready scan --changed-since main
+release.sh
+      3:4   error   length-40          length compared with 40; SHA-256 names have 64 characters
+             [ "${#rev}" -eq 40 ] || exit 1
+
+1 finding(s): 1 error, 0 warning, 0 info in 1 file(s) scanned.
+1 finding(s) on lines not changed since the --changed-since ref were hidden.
+```
+
+### Accept today's findings, fail on new ones: baseline
+
+```bash
+sha256-ready scan --write-baseline sha256-ready.baseline.json   # record what exists now (exit 0)
+sha256-ready scan --baseline sha256-ready.baseline.json         # fail only on findings not in the file
+```
+
+An entry is *rule + file + normalized line*, with a count, so moving code around does not invalidate it, but a **new copy**
+of an accepted line still fails. Entries that no longer match are reported on stderr so you can shrink the file with
+`--write-baseline`. The baseline file is never scanned itself. Commit it and review changes to it like any other
+exception list.
+
+### pre-commit
+
+```yaml
+repos:
+  - repo: https://github.com/cosmichackerx/sha256-ready
+    rev: v0.2.0
+    hooks:
+      - id: sha256-ready            # fails on errors; `sha256-ready-warnings` (manual stage) also fails on warnings
+```
+
+The hook is built with `cargo` (Rust 1.85 or newer) and receives the staged files as arguments.
+
 ## Rules
 
 | Rule | Severity | Finds |
@@ -131,13 +179,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: cosmichackerx/sha256-ready@v0.1.0
+      - uses: cosmichackerx/sha256-ready@v0.2.0
         with:
           fail-on: error            # error | warning | info | never
           format: github            # annotations on the PR diff
           exclude: |
             vendor/**
           sarif-file: sha256-ready.sarif
+          # changed-since: origin/${{ github.base_ref }}   # needs fetch-depth: 0
+          # baseline: sha256-ready.baseline.json
       - uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
@@ -179,6 +229,7 @@ list above is a snapshot, not an issue report. No issues or pull requests were o
   or a hash length computed at run time. Treat a clean scan as "no obvious assumptions", not as proof.
 - `sandbox` needs `git` 2.29 or newer on `PATH`.
 - Built-in rules only (no custom rule files yet, see the roadmap issues).
+- `--changed-since` works on lines of the working tree; a finding caused by an *unchanged* line elsewhere (for example a constant defined in another file) is not reported.
 
 ## Development
 

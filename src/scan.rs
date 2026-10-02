@@ -16,6 +16,9 @@ pub struct Finding {
     pub message: String,
     /// The offending line, trimmed and shortened.
     pub snippet: String,
+    /// Path as found on disk (not serialized); used for --changed-since filtering.
+    #[serde(skip)]
+    pub abs: PathBuf,
 }
 
 pub struct Options {
@@ -25,11 +28,20 @@ pub struct Options {
     pub max_filesize: u64,
     /// Report findings in test/fixture files one level lower (error -> warning -> info).
     pub demote_tests: bool,
+    /// Files that must never be scanned (for example the baseline file itself).
+    pub skip_files: Vec<PathBuf>,
 }
 
 impl Default for Options {
     fn default() -> Self {
-        Options { roots: vec![PathBuf::from(".")], exclude: vec![], use_gitignore: true, max_filesize: 1_000_000, demote_tests: true }
+        Options {
+            roots: vec![PathBuf::from(".")],
+            exclude: vec![],
+            use_gitignore: true,
+            max_filesize: 1_000_000,
+            demote_tests: true,
+            skip_files: vec![],
+        }
     }
 }
 
@@ -39,6 +51,10 @@ pub struct ScanStats {
     pub files_skipped_binary: usize,
     pub files_skipped_large: usize,
     pub suppressed: usize,
+    /// Findings dropped because they are not on lines changed since `--changed-since`.
+    pub unchanged_filtered: usize,
+    /// Findings accepted by a baseline file.
+    pub baselined: usize,
 }
 
 const SKIP_NAMES: &[&str] = &[
@@ -142,6 +158,7 @@ pub fn scan_text_with(name: &str, text: &str, stats: &mut ScanStats, demote_test
                 column: h.column,
                 message: h.message,
                 snippet: snippet(line),
+                abs: PathBuf::new(),
             });
         }
     }
@@ -152,6 +169,13 @@ fn rel(root: &Path, p: &Path) -> String {
     let r = p.strip_prefix(root).unwrap_or(p);
     let s = r.to_string_lossy().replace('\\', "/");
     s.trim_start_matches("./").to_string()
+}
+
+fn same_file(a: &Path, b: &Path) -> bool {
+    match (a.canonicalize(), b.canonicalize()) {
+        (Ok(x), Ok(y)) => x == y,
+        _ => false,
+    }
 }
 
 pub fn scan(opts: &Options) -> Result<(Vec<Finding>, ScanStats), String> {
@@ -184,6 +208,9 @@ pub fn scan(opts: &Options) -> Result<(Vec<Finding>, ScanStats), String> {
                 continue;
             }
             let path = entry.path();
+            if opts.skip_files.iter().any(|s| same_file(s, path)) {
+                continue;
+            }
             let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
             if SKIP_NAMES.contains(&name.as_str()) || SKIP_SUFFIXES.iter().any(|s| name.ends_with(s)) {
                 continue;
@@ -206,7 +233,12 @@ pub fn scan(opts: &Options) -> Result<(Vec<Finding>, ScanStats), String> {
             }
             let text = String::from_utf8_lossy(&bytes);
             stats.files_scanned += 1;
-            findings.extend(scan_text_with(&rel(&base, path), &text, &mut stats, opts.demote_tests));
+            let display = if root.is_file() { rel(Path::new(""), root) } else { rel(&base, path) };
+            let mut found = scan_text_with(&display, &text, &mut stats, opts.demote_tests);
+            for f in &mut found {
+                f.abs = path.to_path_buf();
+            }
+            findings.extend(found);
         }
     }
     findings.sort_by(|a, b| a.file.cmp(&b.file).then(a.line.cmp(&b.line)).then(a.rule.cmp(b.rule)));

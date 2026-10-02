@@ -17,6 +17,12 @@ inputs:
   exclude:
     description: Newline separated globs to skip, for example vendor/**.
     default: ""
+  changed-since:
+    description: "Only report findings on lines changed since this git ref, e.g. origin/main (needs fetch-depth: 0)."
+    default: ""
+  baseline:
+    description: Path of a baseline file (from `sha256-ready scan --write-baseline`) whose findings are accepted.
+    default: ""
   sarif-file:
     description: If set, also write a SARIF 2.1.0 report to this path (for github/codeql-action/upload-sarif).
     default: ""
@@ -72,10 +78,14 @@ runs:
         FORMAT: ${{ inputs.format }}
         EXCLUDE: ${{ inputs.exclude }}
         SARIF_FILE: ${{ inputs.sarif-file }}
+        CHANGED_SINCE: ${{ inputs.changed-since }}
+        BASELINE: ${{ inputs.baseline }}
       run: |
         set -uo pipefail
         args=()
         while IFS= read -r glob; do [ -n "$glob" ] && args+=(--exclude "$glob"); done <<< "$EXCLUDE"
+        [ -n "$CHANGED_SINCE" ] && args+=(--changed-since "$CHANGED_SINCE")
+        [ -n "$BASELINE" ] && args+=(--baseline "$BASELINE")
         if [ -n "$SARIF_FILE" ]; then
           sha256-ready scan $SCAN_PATH ${args[@]+"${args[@]}"} --format sarif --fail-on never --output "$SARIF_FILE"
         fi

@@ -37,6 +37,12 @@ pub fn text(f: &[Finding], st: &ScanStats) -> String {
     if st.suppressed > 0 {
         out.push_str(&format!("{} finding(s) suppressed by `sha256-ready: ignore` comments.\n", st.suppressed));
     }
+    if st.baselined > 0 {
+        out.push_str(&format!("{} finding(s) accepted by the baseline file.\n", st.baselined));
+    }
+    if st.unchanged_filtered > 0 {
+        out.push_str(&format!("{} finding(s) on lines not changed since the --changed-since ref were hidden.\n", st.unchanged_filtered));
+    }
     if !f.is_empty() {
         out.push_str("Run `sha256-ready rules --explain <rule>` for the reason and the fix.\n");
     }
@@ -92,7 +98,7 @@ pub fn json(f: &[Finding], st: &ScanStats) -> String {
         "schema": 1,
         "tool": "sha256-ready",
         "version": env!("CARGO_PKG_VERSION"),
-        "summary": { "error": e, "warning": w, "info": i, "files_scanned": st.files_scanned, "suppressed": st.suppressed },
+        "summary": { "error": e, "warning": w, "info": i, "files_scanned": st.files_scanned, "suppressed": st.suppressed, "baselined": st.baselined, "hidden_unchanged": st.unchanged_filtered },
         "findings": f,
     }))
     .unwrap()

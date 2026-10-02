@@ -46,6 +46,18 @@ enum Cmd {
         /// Report test/fixture findings at full severity (default: one level lower)
         #[arg(long)]
         strict_tests: bool,
+        /// Only report findings on lines changed since this git ref (merge base with HEAD, plus the working tree)
+        #[arg(long, value_name = "REF")]
+        changed_since: Option<String>,
+        /// With --changed-since: report every finding in changed files, not just on changed lines
+        #[arg(long, requires = "changed_since")]
+        whole_files: bool,
+        /// Accept the findings listed in this baseline file; fail only on new ones
+        #[arg(long, value_name = "FILE")]
+        baseline: Option<PathBuf>,
+        /// Write the current findings to FILE as a baseline and exit 0
+        #[arg(long, value_name = "FILE", conflicts_with = "baseline")]
+        write_baseline: Option<PathBuf>,
         /// Write the report to a file instead of stdout
         #[arg(short, long)]
         output: Option<PathBuf>,
@@ -108,15 +120,61 @@ fn run() -> Result<u8, String> {
             let code = sandbox::run(&object_format, commits, keep, &command)?;
             Ok(u8::try_from(code).unwrap_or(1))
         }
-        Cmd::Scan { paths, format, fail_on, exclude, no_gitignore, strict_tests, output } => {
+        Cmd::Scan {
+            paths,
+            format,
+            fail_on,
+            exclude,
+            no_gitignore,
+            strict_tests,
+            changed_since,
+            whole_files,
+            baseline,
+            write_baseline,
+            output,
+        } => {
             let threshold = if fail_on == "never" {
                 None
             } else {
                 Some(Severity::parse(&fail_on).ok_or_else(|| format!("unknown --fail-on '{fail_on}' (error, warning, info, never)"))?)
             };
-            let opts =
-                scan::Options { roots: paths, exclude, use_gitignore: !no_gitignore, demote_tests: !strict_tests, ..Default::default() };
-            let (findings, stats) = scan::scan(&opts)?;
+            let opts = scan::Options {
+                roots: paths,
+                exclude,
+                use_gitignore: !no_gitignore,
+                demote_tests: !strict_tests,
+                skip_files: baseline.iter().chain(write_baseline.iter()).cloned().collect(),
+                ..Default::default()
+            };
+            let (mut findings, mut stats) = scan::scan(&opts)?;
+            if let Some(since) = &changed_since {
+                let dir = opts.roots.first().map(|p| {
+                    if p.is_file() {
+                        p.parent().unwrap_or(std::path::Path::new(".")).to_path_buf()
+                    } else {
+                        p.clone()
+                    }
+                });
+                let dir = dir.filter(|d| !d.as_os_str().is_empty()).unwrap_or_else(|| PathBuf::from("."));
+                let changed = sha256_ready::changed::Changed::load(&dir, since, whole_files)?;
+                findings = changed.filter(findings, &mut stats);
+            }
+            if let Some(path) = &write_baseline {
+                let n = sha256_ready::baseline::write(path, &findings)?;
+                eprintln!("sha256-ready: wrote {n} finding(s) to {}", path.display());
+                return Ok(0);
+            }
+            if let Some(path) = &baseline {
+                let b = sha256_ready::baseline::load(path)?;
+                let (rest, stale) = sha256_ready::baseline::apply(&b, findings, &mut stats);
+                findings = rest;
+                if stale > 0 {
+                    eprintln!(
+                        "sha256-ready: {stale} baseline entr{} no longer match; refresh with --write-baseline",
+                        if stale == 1 { "y" } else { "ies" }
+                    );
+                }
+            }
             let body = match format {
                 Format::Text => report::text(&findings, &stats),
                 Format::Json => report::json(&findings, &stats),
