@@ -1,0 +1,85 @@
+name: Git SHA-256 Readiness Audit
+description: Find code, CI scripts and SQL that assume 40-character Git hashes, before Git 3.0 makes SHA-256 repos the default.
+author: cosmichackerx
+branding:
+  icon: hash
+  color: blue
+inputs:
+  path:
+    description: Files or directories to scan (space separated).
+    default: "."
+  fail-on:
+    description: "Lowest severity that fails the step: error, warning, info or never."
+    default: error
+  format:
+    description: "Report format: text, github (annotations), markdown, json or sarif."
+    default: github
+  exclude:
+    description: Newline separated globs to skip, for example vendor/**.
+    default: ""
+  sarif-file:
+    description: If set, also write a SARIF 2.1.0 report to this path (for github/codeql-action/upload-sarif).
+    default: ""
+  version:
+    description: "sha256-ready release to download (for example 0.1.0), or 'source' to build the action's own checkout with cargo."
+    default: "0.1.0"
+outputs:
+  exit-code:
+    description: Exit code of the scan (0 = nothing at or above fail-on).
+    value: ${{ steps.scan.outputs.exit-code }}
+runs:
+  using: composite
+  steps:
+    - name: Install sha256-ready
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        bindir="${RUNNER_TEMP}/sha256-ready-bin"
+        mkdir -p "$bindir"
+        if [ "$VERSION" = "source" ]; then
+          cargo build --release --locked --manifest-path "${GITHUB_ACTION_PATH}/Cargo.toml"
+          exe=sha256-ready; [ "$RUNNER_OS" = "Windows" ] && exe=sha256-ready.exe
+          cp "${GITHUB_ACTION_PATH}/target/release/${exe}" "$bindir/"
+        else
+          case "${RUNNER_OS}-${RUNNER_ARCH}" in
+            Linux-X64) target=x86_64-unknown-linux-gnu ;;
+            Linux-ARM64) target=aarch64-unknown-linux-gnu ;;
+            macOS-ARM64) target=aarch64-apple-darwin ;;
+            macOS-X64) target=x86_64-apple-darwin ;;
+            Windows-X64) target=x86_64-pc-windows-msvc ;;
+            *) echo "::error::unsupported runner ${RUNNER_OS}-${RUNNER_ARCH}"; exit 1 ;;
+          esac
+          asset="sha256-ready-${target}.tar.gz"
+          url="https://github.com/cosmichackerx/sha256-ready/releases/download/v${VERSION#v}/${asset}"
+          cd "$bindir"
+          curl --fail --silent --show-error --location --retry 3 -o "$asset" "$url"
+          curl --fail --silent --show-error --location --retry 3 -o "$asset.sha256" "${url}.sha256"
+          expected=$(cut -d' ' -f1 "$asset.sha256")
+          if command -v sha256sum >/dev/null 2>&1; then actual=$(sha256sum "$asset" | cut -d' ' -f1); else actual=$(shasum -a 256 "$asset" | cut -d' ' -f1); fi
+          if [ "$expected" != "$actual" ]; then echo "::error::checksum mismatch for $asset"; exit 1; fi
+          tar -xzf "$asset"
+          rm -f "$asset" "$asset.sha256"
+        fi
+        echo "$bindir" >> "$GITHUB_PATH"
+    - name: Scan
+      id: scan
+      shell: bash
+      env:
+        SCAN_PATH: ${{ inputs.path }}
+        FAIL_ON: ${{ inputs.fail-on }}
+        FORMAT: ${{ inputs.format }}
+        EXCLUDE: ${{ inputs.exclude }}
+        SARIF_FILE: ${{ inputs.sarif-file }}
+      run: |
+        set -uo pipefail
+        args=()
+        while IFS= read -r glob; do [ -n "$glob" ] && args+=(--exclude "$glob"); done <<< "$EXCLUDE"
+        if [ -n "$SARIF_FILE" ]; then
+          sha256-ready scan $SCAN_PATH ${args[@]+"${args[@]}"} --format sarif --fail-on never --output "$SARIF_FILE"
+        fi
+        sha256-ready scan $SCAN_PATH ${args[@]+"${args[@]}"} --format "$FORMAT" --fail-on "$FAIL_ON"
+        code=$?
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        exit $code

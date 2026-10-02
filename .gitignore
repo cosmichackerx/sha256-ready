@@ -1,0 +1,3 @@
+target/
+*.sarif
+sarif-schema.json
