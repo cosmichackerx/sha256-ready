@@ -130,7 +130,7 @@ exception list.
 ```yaml
 repos:
   - repo: https://github.com/cosmichackerx/sha256-ready
-    rev: v0.2.0
+    rev: v0.2.1
     hooks:
       - id: sha256-ready            # fails on errors; `sha256-ready-warnings` (manual stage) also fails on warnings
 ```
@@ -179,7 +179,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: cosmichackerx/sha256-ready@v0.2.0
+      - uses: cosmichackerx/sha256-ready@v0.2.1
         with:
           fail-on: error            # error | warning | info | never
           format: github            # annotations on the PR diff
