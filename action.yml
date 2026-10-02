@@ -28,7 +28,7 @@ inputs:
     default: ""
   version:
     description: "sha256-ready release to download (for example 0.1.0), or 'source' to build the action's own checkout with cargo."
-    default: "0.1.0"
+    default: "0.2.0"
 outputs:
   exit-code:
     description: Exit code of the scan (0 = nothing at or above fail-on).
