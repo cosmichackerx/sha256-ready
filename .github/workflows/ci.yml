@@ -104,3 +104,55 @@ jobs:
           path: examples/hook-with-sha1-assumptions.sh
       - shell: bash
         run: test "${{ steps.bad.outcome }}" = failure
+  msrv-install:
+    name: cargo install without a lockfile on Rust 1.85
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install 1.85 --profile minimal && rustup default 1.85
+      - name: install (dependencies resolved fresh, like pre-commit does)
+        run: |
+          cargo install --path . --root "$RUNNER_TEMP/inst"
+          "$RUNNER_TEMP/inst/bin/sha256-ready" --version
+  pre-commit:
+    name: pre-commit hook
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install pre-commit
+      - name: run the hook from this checkout against a repo with and without problems
+        run: |
+          set -u
+          git config --global user.email ci@example.com && git config --global user.name ci
+          dir=$(mktemp -d); cd "$dir"; git init -q -b main
+          cp "$GITHUB_WORKSPACE/examples/hook-with-sha1-assumptions.sh" bad.sh
+          cp "$GITHUB_WORKSPACE/examples/clean.sh" ok.sh
+          git add -A
+          pre-commit try-repo "$GITHUB_WORKSPACE" sha256-ready --files ok.sh
+          if pre-commit try-repo "$GITHUB_WORKSPACE" sha256-ready --files bad.sh; then echo "hook should have failed"; exit 1; fi
+  code-scanning:
+    name: SARIF upload to code scanning (pull requests)
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo build --release --locked
+      - run: ./target/release/sha256-ready scan examples --format sarif --fail-on never -o e2e.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: e2e.sarif
+          category: sha256-ready-e2e
+      - name: confirm GitHub processed the upload and kept the results
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ref="refs/pull/${{ github.event.pull_request.number }}/merge"
+          for i in $(seq 1 24); do
+            n=$(gh api "repos/$GITHUB_REPOSITORY/code-scanning/analyses?ref=$ref&tool_name=sha256-ready" --jq '[.[]|select(.category=="sha256-ready-e2e")]|.[0].results_count // empty' 2>/dev/null || true)
+            if [ -n "$n" ]; then echo "analysis processed: $n results"; test "$n" -ge 5; exit $?; fi
+            echo "waiting for processing ($i)"; sleep 10
+          done
+          echo "analysis never showed up"; exit 1

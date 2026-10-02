@@ -6,6 +6,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-02
+
+### Added
+- `--changed-since <ref>` (with `--whole-files`): report only findings on lines changed since the merge base with a ref,
+  plus untracked files.
+- `--baseline <file>` / `--write-baseline <file>`: accept existing findings (rule + file + normalized line, with counts)
+  and fail only on new ones; stale entries are reported.
+- `.pre-commit-hooks.yaml` with `sha256-ready` and `sha256-ready-warnings` hooks.
+- Action inputs `changed-since` and `baseline`.
+- JSON summary fields `baselined` and `hidden_unchanged`.
+- CI: pre-commit hook test, `cargo install` on Rust 1.85 without a lockfile, and an end-to-end SARIF upload to code scanning
+  on pull requests.
+
+### Changed
+- Scanning a single file now reports its path as given (previously only the file name), so findings from different
+  directories are distinguishable in pre-commit runs and baselines.
+
+### Fixed
+- Dependency pinned (`ignore = "=0.4.23"`, resolver 3) so that a fresh `cargo install` works on the documented minimum Rust 1.85.
+
 ## [0.1.0] - 2026-10-02
 
 ### Added

@@ -1,0 +1,15 @@
+- id: sha256-ready
+  name: sha256-ready (40-character Git hash assumptions)
+  description: Fail when staged files assume Git object names are 40 hex characters (SHA-1).
+  entry: sha256-ready scan --fail-on error
+  language: rust
+  types: [text]
+  pass_filenames: true
+- id: sha256-ready-warnings
+  name: sha256-ready (fail on warnings too)
+  description: Like sha256-ready, but also fails on warnings (hard-coded empty-tree ids, --abbrev=40, API constants).
+  entry: sha256-ready scan --fail-on warning
+  language: rust
+  types: [text]
+  pass_filenames: true
+  stages: [manual]
