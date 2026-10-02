@@ -168,3 +168,19 @@ jobs:
         with:
           path: .github action.yml
           fail-on: error
+
+  dependabot-gaps:
+    name: dependabot-gaps (released action, consumer test)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: cosmichackerx/dependabot-gaps@v0.2.0
+        with:
+          fail-on: warning
+          # on pull requests: only gaps the PR introduces (needs fetch-depth: 0 above)
+          pr-mode: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
