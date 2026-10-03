@@ -1,0 +1,6 @@
+{
+  "claims": [
+    {"id": "action pin in the README equal the tag being released", "file": "README.md", "regex": "sha256-ready@v([0-9.]+)", "expect": {"env": "RELEASE_TAG", "regex": "^v([0-9.]+)$"}},
+    {"id": "package version equals the tag being released", "file": "Cargo.toml", "regex": "^version = \"([0-9.]+)\"", "expect": {"env": "RELEASE_TAG", "regex": "^v([0-9.]+)$"}}
+  ]
+}
