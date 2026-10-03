@@ -12,11 +12,4 @@ permissions:
 jobs:
   pins:
     name: README pins equal the newest tag
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: cosmichackerx/claims-check@v0.2.0
-        with:
-          config: .claims-latest.json
+    uses: cosmichackerx/claims-check/.github/workflows/reusable-latest-tag.yml@v0.3.0
