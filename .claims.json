@@ -1,0 +1,5 @@
+{
+  "claims": [
+    {"id": "action pin in the README", "file": "README.md", "regex": "sha256-ready@v([0-9.]+)", "expect": {"file": "Cargo.toml", "regex": "^version = \"([0-9.]+)\""}}
+  ]
+}
