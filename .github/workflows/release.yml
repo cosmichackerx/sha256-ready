@@ -7,7 +7,11 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
 jobs:
+  gate:
+    name: release gate (claims-check)
+    uses: ./.github/workflows/release-gate.yml
   build:
+    needs: gate
     name: build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     strategy:

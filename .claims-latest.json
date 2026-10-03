@@ -1,0 +1,5 @@
+{
+  "claims": [
+    {"id": "action pin in the README equal the newest release", "file": "README.md", "regex": "sha256-ready@v([0-9.]+)", "expect": {"latest_tag": "https://github.com/cosmichackerx/sha256-ready"}}
+  ]
+}

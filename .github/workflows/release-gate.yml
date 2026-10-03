@@ -1,0 +1,34 @@
+# Pre-release claims gate: the README, the package version and the tag being released must agree.
+# Run it by hand BEFORE tagging (Actions > Release gate > Run workflow, tag = v1.2.3), and it runs again on the tag.
+name: Release gate
+
+on:
+  workflow_call:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag you are about to create, for example v1.2.3"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  claims:
+    name: claims-check against the tag
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Tag looks like a version
+        run: |
+          case "$RELEASE_TAG" in v[0-9]*) ;; *) echo "RELEASE_TAG=$RELEASE_TAG is not a version tag (use v1.2.3 in the tag input)"; exit 1;; esac
+      - name: README numbers and pins hold
+        uses: cosmichackerx/claims-check@v0.2.0
+      - name: README pins and package version equal the tag being released
+        uses: cosmichackerx/claims-check@v0.2.0
+        with:
+          config: .claims-release.json
