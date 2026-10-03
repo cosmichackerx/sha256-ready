@@ -3,6 +3,7 @@
 **Find code that assumes a Git commit hash is 40 characters, before Git 3.0 makes SHA-256 repositories the default.**
 
 [![CI](https://github.com/cosmichackerx/sha256-ready/actions/workflows/ci.yml/badge.svg)](https://github.com/cosmichackerx/sha256-ready/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/cosmichackerx/sha256-ready?sort=semver)](https://github.com/cosmichackerx/sha256-ready/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 `sha256-ready` is a single-binary CLI (Rust) and GitHub Action that audits a source tree for the code that
