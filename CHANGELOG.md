@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+* CI: the action pin in the README is checked against `Cargo.toml` by [claims-check](https://github.com/cosmichackerx/claims-check) (`.claims.json`). The first run found nothing stale.
+
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
