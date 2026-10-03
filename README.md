@@ -241,3 +241,21 @@ cargo clippy --all-targets -- -D warnings
 See [CONTRIBUTING.md](CONTRIBUTING.md). MIT licensed, no telemetry, no network access.
 
 <sub>Keywords: Git 3.0, SHA-256, sha256 object format, SHA-1 to SHA-256 migration, 40 hex characters, commit hash length, `object-format`, `[0-9a-f]{40}`, varchar(40), null oid, pre-receive hook, CI audit, code scanning, SARIF.</sub>
+
+## Related tools
+
+Small, independent tools by the same author, for build and CI hygiene and for migrations with a deadline. Each works on its own; none requires another.
+
+**Gradle and Android migrations**
+
+* [gradle-version-catalog-lint](https://github.com/cosmichackerx/gradle-version-catalog-lint): Lints `libs.versions.toml`: unused libraries, plugins and versions, dynamic or SNAPSHOT versions, hard-coded dependencies.
+* [gradle10-ready](https://github.com/cosmichackerx/gradle10-ready): Static scan of Gradle build scripts for what Gradle 10 removes (space assignment, multi-string dependencies, Kotlin DSL delegates). `--fix`, PR mode.
+* [agp9-ready](https://github.com/cosmichackerx/agp9-ready): Static scan of Gradle files for what Android Gradle Plugin 9 and 10 break (built-in Kotlin, legacy variant API, opt-outs), including `buildSrc`. `--fix`, PR mode.
+* [android-target-ready](https://github.com/cosmichackerx/android-target-ready): Static scanner for the targetSdk 36 / 37 migration in app code and manifests (edge-to-edge, predictive back, large screens).
+* [android-target-lint](https://github.com/cosmichackerx/android-target-lint): The same targetSdk migration checks as real Android Lint rules (a lint jar with type resolution).
+
+**CI and repository hygiene**
+
+* [node24-ready](https://github.com/cosmichackerx/node24-ready): Finds GitHub Actions still on the removed Node 20 runtime, also inside composite actions and reusable workflows, and the smallest node24 upgrade.
+* [dependabot-gaps](https://github.com/cosmichackerx/dependabot-gaps): Finds manifests your `dependabot.yml` does not cover, and dead or overlapping entries.
+* [agent-context-diff](https://github.com/cosmichackerx/agent-context-diff): Diffs `AGENTS.md`, `CLAUDE.md`, Cursor rules and MCP configs between git refs (new servers, widened permissions, hidden Unicode).
