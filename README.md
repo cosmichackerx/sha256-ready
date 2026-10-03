@@ -261,5 +261,6 @@ Small, independent tools by the same author, for build and CI hygiene and for mi
 * [node24-ready](https://github.com/cosmichackerx/node24-ready): Finds GitHub Actions still on the removed Node 20 runtime, also inside composite actions and reusable workflows, and the smallest node24 upgrade.
 * [dependabot-gaps](https://github.com/cosmichackerx/dependabot-gaps): Finds manifests your `dependabot.yml` does not cover, and dead or overlapping entries.
 * [helm4-ready](https://github.com/cosmichackerx/helm4-ready): Finds the Helm 3 CLI usage (removed and deprecated flags, executable post-renderers, `registry login` URLs, Helm 3 pins) that Helm 4 rejects in CI workflows, scripts and Makefiles, checked against real Helm 3.22.0 and 4.3.0.
+* [kafka4-ready](https://github.com/cosmichackerx/kafka4-ready): Finds Kafka 3 settings and CLI usage that Kafka 4 rejects or silently ignores (ZooKeeper-mode broker files, removed `zookeeper.*` and `log.message.format.version` settings, `--zookeeper` options, space-separated `--bootstrap-server`), checked against a real Kafka 4 broker and tools.
 * [agent-context-diff](https://github.com/cosmichackerx/agent-context-diff): Diffs `AGENTS.md`, `CLAUDE.md`, Cursor rules and MCP configs between git refs (new servers, widened permissions, hidden Unicode).
 
